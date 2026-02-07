@@ -35,9 +35,6 @@ ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_JUglqvkLKkpYUg6Psaay9w_WhQKbkc-
 ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
-# Force install typescript to resolve peer dependency conflicts during valid build
-RUN npm install typescript --no-save --legacy-peer-deps
-
 RUN \
   if [ -f yarn.lock ]; then yarn run build; \
   elif [ -f package-lock.json ]; then npm run build; \
