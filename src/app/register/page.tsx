@@ -1,75 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Mail } from "lucide-react";
 
 export default function RegisterPage() {
     const [email, setEmail] = useState("");
-    const [otp, setOtp] = useState("");
-    const [step, setStep] = useState<"email" | "otp">("email");
     const [loading, setLoading] = useState(false);
-    const router = useRouter();
+    const [sent, setSent] = useState(false);
     const supabase = createClient();
-    const [timer, setTimer] = useState(60);
-    const [canResend, setCanResend] = useState(false);
 
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (step === "otp" && timer > 0) {
-            interval = setInterval(() => {
-                setTimer((prev) => prev - 1);
-            }, 1000);
-        } else if (timer === 0) {
-            setCanResend(true);
-        }
-        return () => clearInterval(interval);
-    }, [step, timer]);
-
-    const handleSendOtp = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+    const handleSendMagicLink = async (e: React.FormEvent) => {
+        e.preventDefault();
         setLoading(true);
-        setCanResend(false);
-        setTimer(60);
 
         const { error } = await supabase.auth.signInWithOtp({
             email,
             options: {
                 shouldCreateUser: true,
+                emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`,
             }
-        });
-
-        if (error) {
-            toast.error(error.message);
-        } else {
-            toast.success("Code sent to your email!");
-            setStep("otp");
-        }
-        setLoading(false);
-    };
-
-    const handleVerifyOtp = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-
-        const { data, error } = await supabase.auth.verifyOtp({
-            email,
-            token: otp,
-            type: "email",
         });
 
         if (error) {
             toast.error(error.message);
             setLoading(false);
         } else {
-            toast.success("Successfully verified!");
-            router.push("/onboarding");
+            toast.success("Magic link sent!");
+            setSent(true);
+            setLoading(false);
         }
     };
 
@@ -98,14 +63,33 @@ export default function RegisterPage() {
                     <CardHeader>
                         <CardTitle className="text-center">Create an Account</CardTitle>
                         <CardDescription className="text-center">
-                            {step === "email"
-                                ? "Enter your email to get started."
-                                : `Enter the code sent to ${email}`}
+                            {sent
+                                ? "Check your email for the magic link."
+                                : "Enter your email to get started."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {step === "email" ? (
-                            <form onSubmit={handleSendOtp} className="space-y-4">
+                        {sent ? (
+                            <div className="flex flex-col items-center gap-4 py-4 text-center">
+                                <div className="rounded-full bg-primary/10 p-3">
+                                    <Mail className="h-6 w-6 text-primary" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold text-lg">Check your inbox</h3>
+                                    <p className="text-muted-foreground text-sm">
+                                        We sent a login link to <span className="font-medium text-foreground">{email}</span>.
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setSent(false)}
+                                    className="mt-2 w-full"
+                                >
+                                    Use a different email
+                                </Button>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleSendMagicLink} className="space-y-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email</Label>
                                     <Input
@@ -119,48 +103,8 @@ export default function RegisterPage() {
                                     />
                                 </div>
                                 <Button type="submit" className="w-full" disabled={loading}>
-                                    {loading ? "Sending Code..." : "Send Code"}
+                                    {loading ? "Sending..." : "Send Magic Link"}
                                 </Button>
-                            </form>
-                        ) : (
-                            <form onSubmit={handleVerifyOtp} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="otp">Confirmation Code</Label>
-                                    <Input
-                                        id="otp"
-                                        type="text"
-                                        placeholder="123456"
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        required
-                                        disabled={loading}
-                                    />
-                                </div>
-                                <Button type="submit" className="w-full" disabled={loading}>
-                                    {loading ? "Verifying..." : "Verify & Continue"}
-                                </Button>
-
-                                <div className="flex flex-col gap-2 mt-4">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full"
-                                        onClick={() => handleSendOtp()}
-                                        disabled={!canResend || loading}
-                                    >
-                                        {canResend ? "Resend Code" : `Resend Code in ${timer}s`}
-                                    </Button>
-
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="w-full"
-                                        onClick={() => setStep("email")}
-                                        disabled={loading}
-                                    >
-                                        Change Email
-                                    </Button>
-                                </div>
                             </form>
                         )}
                     </CardContent>
