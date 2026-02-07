@@ -32,6 +32,8 @@ COPY . .
 # Connect build args - Hardcoding for certainty
 ENV NEXT_PUBLIC_SUPABASE_URL=https://xifchjacajqgwcdtdmfw.supabase.co
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_JUglqvkLKkpYUg6Psaay9w_WhQKbkc-
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
 RUN \
   if [ -f yarn.lock ]; then yarn run build; \
